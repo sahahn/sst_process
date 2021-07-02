@@ -300,9 +300,6 @@ def set_trial_type(subj):
 def fix_resps(subj):
     '''Operates on each subject in place'''
 
-    go_trial_mask = subj.df.loc[subj.df['trial_type'] == 'GoTrial']
-    go_trial_idx = go_trial_mask[go_trial_mask == True].index
-
     cresp_replace = {'2.0': 2.0,
                      '1.0': 1.0,
                      '3.0': 3.0,
