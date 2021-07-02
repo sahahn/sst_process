@@ -19,7 +19,10 @@ def main(args):
     for event in u_events:
         print(f'Processing event: {event}')
         dfs.append(process_event(event, files))
-        print('-')
+
+        print()
+        print('-----')
+        print()
     
     # Concat all events
     df = pd.concat(dfs)

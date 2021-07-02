@@ -460,10 +460,10 @@ def is_violator(subj):
 def calc_ssrt(subj):
 
     # Grab copy
-    s_df = subj.df.copy()
+    s_df = subj.df
 
     # Separate just go trials
-    go_trials = s_df.query('trial_type == "GoTrial"')
+    go_trials = s_df.query('trial_type == "GoTrial"').copy()
 
     # Set omissions to max go.rt - if primary rt is_null means omission
     # then sort go trials
@@ -504,7 +504,7 @@ def calc_ssrt(subj):
 def get_output_df(subjs, eventname):
     
     # Init df
-    df = pd.DataFrame(index=[s.name for s in subjs],
+    df = pd.DataFrame(index=[s.full_name for s in subjs],
                       columns=['tfmri_sst_all_beh_total_issrt',
                                'tfmri_sst_beh_glitchflag',
                                'tfmri_sst_beh_glitchcnt',
@@ -515,31 +515,53 @@ def get_output_df(subjs, eventname):
     
     # For each subject
     for subj in subjs:
-        df.loc[subj.name, 'tfmri_sst_all_beh_total_issrt'] = calc_ssrt(subj)
-        df.loc[subj.name, 'tfmri_sst_beh_glitchflag'] = get_glitched_flag(subj)
-        df.loc[subj.name, 'tfmri_sst_beh_glitchcnt'] = get_glitched_cnt(subj)
-        df.loc[subj.name, 'tfmri_sst_beh_0SSDcount'] = get_0SSD_cnt(subj)
-        df.loc[subj.name, 'tfmri_sst_beh_0SSD>20flag'] = get_0SSD_flag(subj)
-        df.loc[subj.name, 'tfmri_sst_beh_violatorflag'] = is_violator(subj)
+        df.loc[subj.full_name, 'tfmri_sst_all_beh_total_issrt'] = calc_ssrt(subj)
+        df.loc[subj.full_name, 'tfmri_sst_beh_glitchflag'] = get_glitched_flag(subj)
+        df.loc[subj.full_name, 'tfmri_sst_beh_glitchcnt'] = get_glitched_cnt(subj)
+        df.loc[subj.full_name, 'tfmri_sst_beh_0SSDcount'] = get_0SSD_cnt(subj)
+        df.loc[subj.full_name, 'tfmri_sst_beh_0SSD>20flag'] = get_0SSD_flag(subj)
+        df.loc[subj.full_name, 'tfmri_sst_beh_violatorflag'] = is_violator(subj)
     
     # Add event name
     df['eventname'] = eventname
 
+    # Add index name
+    df.index.name = 'src_subject_id'
+
     # Return
     return df
-    
+
+
+def check_omissions(subjs):
+
+    n_removed = 0
+    for subj in subjs:
+
+        n_missing = len(subj.df.loc[(subj.df['Go.RESP'].isnull()) & (subj.df['Fix.RESP'].isnull()) &
+                                  (subj.df['trial_type'] == 'GoTrial')])
+        n_go_trials = len(subj.df.loc[subj.df['trial_type'] == 'GoTrial'])
+
+        # Remove
+        if n_missing == n_go_trials:
+            subjs.remove(subj)
+            n_removed += 1
+
+    print(f'Subjects removed for all go trial omissions - {n_removed}')
+    return subjs
+
 
 def process_event(event, files):
 
     # Get just one events files
     e_files = [file for file in files if get_eventname(file) == event]
-
+    print(f'Found files - {len(e_files)}')
+    
     # Load files as dfs wrapped in Subj class
+    print('Loading Files...')
     subjs, worrying = load_files(e_files)
 
     # Run twice, as renamed subjects can then overlap
     subjs = process_duplicates(subjs, worrying)
-    print('--')
     subjs = process_duplicates(subjs, worrying)
 
     # Ensure two runs
@@ -547,6 +569,7 @@ def process_event(event, files):
     print(f'Remaining subjects - {len(subjs)}')
 
     # Perform by subject processing
+    print('Fixing data...')
     for subj in subjs:
 
         # Fix trial type
@@ -562,6 +585,11 @@ def process_event(event, files):
         # Set correct go and stop rt
         set_correct_go_rt(subj)
         set_correct_stop_rt(subj)
+
+    # Check for any subjects with all omissions on go trials
+    print('Checking for any subjects with all omissions')
+    subjs = check_omissions(subjs)
+    print(f'Remaining subjects - {len(subjs)}')
     
     # Return output df
     return get_output_df(subjs, event)
