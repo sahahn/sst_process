@@ -1,4 +1,7 @@
 Python code designed to generate some flags and other files of interest from already processed SST event level data.
+This code was used to generate flags / other summaries as made avaliable in Releases 3 and 4 of the [ABCD Study](https://abcdstudy.org/)
+
+See also: https://www.biorxiv.org/content/10.1101/2020.07.27.223057v2.abstract
 
 To run this program, first clone the directory locally. Next, make sure you have python3+ installed.
 This program just requires the external library pandas
